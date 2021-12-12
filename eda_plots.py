@@ -427,7 +427,7 @@ def box_plot(df, col, y = None):
                         # the size of A4 paper lanscape
                         fig.set_size_inches(15, 8)
                         sns.set_context("poster", font_scale = .6, rc={"grid.linewidth": 0.6})
-                        sns.boxplot(x = df[col], y = df[y])
+                        sns.boxplot(y = df[col], x = df[y])
                         plt.setp(ax.get_xticklabels(), rotation=0)
                         plt.title('{} Distribution by {}'.format(col.title(), y.title()))
                         plt.savefig('images/{}_{}_distribution.png'.format(col,y))
