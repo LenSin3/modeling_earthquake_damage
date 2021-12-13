@@ -198,3 +198,137 @@ def transform_to_cat(df, cols_to_cat):
     else:
         raise utils.InvalidDataFrame(df)
     return df
+
+def save_transformed_data(df, filepath):
+    """Save DataFrame to csv.
+
+    Save DataFrame to csf file format.
+
+    Parameters
+    ----------
+    df: DataFrame
+        DataFrame to save to file
+    filepath: str
+        File path to save DataFrame in csv format.
+    
+    Returns
+    -------
+    None
+    """
+    if isinstance(df, pd.DataFrame):
+        # save file in csv format
+        df.to_csv(filepath, index = False)
+    else:
+        raise utils.InvalidDataFrame(df)
+    return None
+
+def dim_redux(df, num_cols, threshold = 0.9):
+    """Drop high correlated features.
+
+    Reduce dimensionality by dropping high correlated features based on threshold
+
+    Parameters
+    ----------
+    df: DataFrame
+        DataFrame containing numerical features to check for correlation.
+    num_cols: List
+        Numerical columns to evaluate for correlation.
+    threshold: float64
+        Features with values above threshold are dropped.
+        Default(value = 0.9)
+
+    Returns
+    -------
+    DataFrame
+    """
+    # check for valid dataframe
+    if isinstance(df, pd.DataFrame):
+        # extract dataframe columns
+        df_cols = df.columns.tolist()
+        # check if numeric columns are in dataframe
+        membership = all(col in df_cols for col in num_cols)
+        # if in dataframe
+        if membership:
+            # extract data of numeric columns
+            df_corr = df[num_cols]
+            # get absolute correlation values
+            corr_df = df_corr.corr().abs()
+            # get a mask of values
+            mask = np.triu(np.ones_like(corr_df, dtype = bool))
+            tri_df = df_corr.corr().mask(mask)
+            to_drop = [col for col in tri_df.columns if any(tri_df[col] > threshold)]
+            if len(to_drop) == 0:
+                print("There are no high correlated features. No column will be dropped!")
+            else:
+                for col in to_drop:
+                    print("Dropping high correlated feature: {}".format(col))
+            # drop the high correlated features
+            reduced_df = df.drop(to_drop, axis = 1)
+        else:
+            not_cols = []
+            for col in num_cols:
+                if col not in df_cols:
+                    not_cols.append(col)
+            raise utils.InvalidColumn(col)
+    else:
+        raise utils.InvalidDataFrame(df)
+    return reduced_df
+
+
+def drop_low_var_cols(df, target_var = None, unique_val_threshold = 0.9):
+    """Drop low variance categorical features.
+
+    Drops column if a normalized unique value count is greater than the threshold.
+
+    Parameters
+    ----------
+    df: DataFrame
+        Dataframe to evaluate and drop columns if condition is true.
+    target_var: str
+        Feature to exclude from low variance analysis.
+        Default(value = None)
+    unique_val_threshold: float64
+        Features with values above threshold are dropped.
+        Default(value = 0.9)
+    
+    Returns:
+    --------
+    DataFrame    
+    """
+    if isinstance(df, pd.DataFrame):
+        df_cols = df.columns.tolist()
+        to_drop = []
+        for col in df_cols:
+            if not target_var:
+                if df[col].dtypes == 'object':
+                    uniques = unique_vals_column(df, col, normalize = True)
+                    # get max value counts
+                    max_unique = uniques['percentOfTotal'].max()
+                    # set a threshold
+                    if max_unique >= unique_val_threshold:
+                        print("Dropping low variance feature: {}".format(col))
+                        # drop columns with normalized value counts above threshold
+                        df.drop(col, axis = 1, inplace = True)
+                    else:
+                        pass
+            if target_var:
+                if target_var in df_cols:
+                    if df[col].dtypes == 'object' and col != target_var:
+                        uniques = unique_vals_column(df, col, normalize = True)
+                        # get max value counts
+                        max_unique = uniques['percentOfTotal'].max()
+                        # set a threshold
+                        if max_unique >= unique_val_threshold:
+                            print("Dropping low variance feature: {}".format(col))
+                            # drop columns with normalized value counts above threshold
+                            df.drop(col, axis = 1, inplace = True)
+                        else:
+                            pass
+                else:
+                    raise utils.InvalidColumn(target_var)
+    else:
+        raise utils.InvalidDataFrame(df)
+
+    return df
+    
+
