@@ -1,4 +1,5 @@
 from seaborn import palettes
+from seaborn.matrix import heatmap
 from seaborn.utils import ci
 import funcs
 import utils
@@ -438,3 +439,48 @@ def box_plot(df, col, y = None):
                     raise utils.InvalidColumn(y)
         else:
             raise utils.InvalidColumn(col)
+
+def check_for_correlation(df, num_cols):
+    """Plot correlation heatmap of numerical variables.
+
+    Masked correlation heatmap is created of numerical values specified.
+
+    Parameters
+    ----------
+    df: DataFrame
+        DataFrame containing numerical features to check for correlation.
+    num_cols: List
+        Numerical columns to evaluate for correlation.
+
+    Returns
+    -------
+    None
+    """
+    # check for valid dataframe
+    if isinstance(df, pd.DataFrame):
+        # extract dataframe columns
+        df_cols = df.columns.tolist()
+        # check if numeric columns are in dataframe
+        membership = all(col in df_cols for col in num_cols)
+        # if in dataframe
+        if membership:
+            # extract data of numeric columns
+            df_corr = df[num_cols]
+            # build the heatmap
+            sns.set(font_scale = 1)
+            fig, ax = plt.subplots()
+            fig.set_size_inches(15, 8)
+            mask = np.triu(np.ones_like(df_corr.corr(), dtype = bool))
+            heatmap = sns.heatmap(df_corr.corr(), vmin = -1, vmax = 1, mask = mask, annot = True)
+            heatmap.set_title('Correlation Heatmap', fontdict = {'fontsize': 12}, pad = 12)
+            plt.setp(ax.get_xticklabels(), rotation = 90)
+            plt.setp(ax.get_yticklabels(), rotation = 0)
+            plt.show()
+        else:
+            not_cols = []
+            for col in num_cols:
+                if col not in df_cols:
+                    not_cols.append(col)
+            raise utils.InvalidColumn(col)
+    else:
+        raise utils.InvalidDataFrame(df)
