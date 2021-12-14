@@ -49,3 +49,10 @@ class StratifyError(Exception):
     
     def __str__(self):
         return "{} is not of type object and can not be stratified.".format(self.col)
+
+class ClassifierType(Exception):
+    def __init__(self, obj: str):
+        self.obj = obj
+    
+    def __str__(self):
+        return "{} is not a type of classification. Type should be binary if classification is binary or multi_class if classification is multi class.".format(self.obj)
