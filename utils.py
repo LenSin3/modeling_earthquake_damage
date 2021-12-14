@@ -42,3 +42,10 @@ class InvalidList(Exception):
     
     def __str__(self):
         return "Object must be a list."
+
+class StratifyError(Exception):
+    def __init__(self, col: str):
+        self.col = col
+    
+    def __str__(self):
+        return "{} is not of type object and can not be stratified.".format(self.col)
