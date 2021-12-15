@@ -30,6 +30,10 @@ from sklearn import svm
 import xgboost
 import catboost
 
+from sklearn.model_selection import GridSearchCV
+import sklearn.externals
+import joblib
+
 # set seed for reproducibility
 SEED = 24
 # process data before machine learning preprocessing
@@ -279,7 +283,7 @@ def multi_models_classifiers(df, target_var, stratify = True, test_size = 0.25, 
     # extract cat_feats, num_feats, text_feats
     cat_feats, num_feats, text_feats = extract_cat_num_text_feats(X_train, text_feats = text_feats)
     # extract processor pipeline
-    processor = preprocess_col_transformer(cat_feats, num_feats, text_feats = text_feats)
+    preprocessor = preprocess_col_transformer(cat_feats, num_feats, text_feats = text_feats)
     # get classifiers list
     classifiers = models.classifiers_ensemble(type = classifier_type)
     # dictionaries to hold accuracy and f1 scores
@@ -290,7 +294,7 @@ def multi_models_classifiers(df, target_var, stratify = True, test_size = 0.25, 
     for clf_name, clf in classifiers:
         # instantiate pipeline
         print("Creating pipeline for {}.".format(clf_name))
-        pipe = make_pipeline(processor, clf)
+        pipe = make_pipeline(preprocessor, clf)
         # fit training data to pipe
         print("Fitting training data to pipeline for {}.".format(clf_name))
         pipe.fit(X_train, y_train)
@@ -314,17 +318,124 @@ def multi_models_classifiers(df, target_var, stratify = True, test_size = 0.25, 
 
     # create dataframe of acc_scores dict
     df_acc_scores = pd.DataFrame(acc_scores.items(), columns=['Classifier', 'AccScore'])
-    max_acc_scor = df_acc_scores.loc[df_acc_scores['AccScore'] == df_acc_scores['AccScore'].max()]
-    best_classifier_acc_score = max_acc_scor['Classifier'].values.tolist()[0]
+    max_acc_score = df_acc_scores.loc[df_acc_scores['AccScore'] == df_acc_scores['AccScore'].max()]
+    best_classifier_acc_score = max_acc_score['Classifier'].values.tolist()[0]
     # create dataframe of acc_scores dict
     df_f1_scores = pd.DataFrame(f1_scores.items(), columns=['Classifier', 'F1Score'])
     max_f1_score =  df_f1_scores.loc[df_f1_scores['F1Score'] == df_f1_scores['F1Score'].max()]
     # best classifier
     best_classifier_f1_score = max_f1_score['Classifier'].values.toist()[0]
+
+    
+    print("####################################################################################")
+    print("{} model yielded the highest Accuracy Score of: {:.2f}".format(max_acc_score['Classifier'].values.tolist()[0], max_acc_score['AccScore'].values.tolist()[0]))
     # plot scores
     eda_plots.bar_plot(df_acc_scores, 'Classifier', 'AccScore')
+    print("####################################################################################")
+    print("{} model yielded the highest F1 Score of: {:.2f}".format(max_f1_score['Classifier'].values.tolist()[0], max_f1_score['F1Score'].values.tolist()[0]))
     eda_plots.bar_plot(df_f1_scores, 'Classifier', 'F1Score')
     return best_classifier_acc_score, best_classifier_f1_score
+
+def best_classifier_hyperparameter(df, best_classifier, target_var, stratify = True, test_size = 0.25, classifier_type = 'multi_class', text_feats = None):
+    print("hyperparameter tuning for the Best Classifier: {}".format(best_classifier))
+     # split data
+    X_train, X_test, y_train, y_test = split_data(df, target_var=target_var, stratify = stratify, test_size = test_size)
+    # extract cat_feats, num_feats, text_feats
+    cat_feats, num_feats, text_feats = extract_cat_num_text_feats(X_train, text_feats = text_feats)
+    # extract processor pipeline
+    preprocessor = preprocess_col_transformer(cat_feats, num_feats, text_feats = text_feats)
+    # extract best regressor model and grid params
+    grid_params, grid_model = models.classifier_ensemble_hyperparameters(best_classifier)
+    # instantiate pipeline
+    print("Creating pipeline for {}.".format(best_classifier))
+    pipe = make_pipeline(preprocessor, grid_model)
+    # dictionary to hold gridsearch model output
+    GridSearchCV_model_output = {}
+    # create gridsearch object
+    grid_search = GridSearchCV(pipe, param_grid=grid_params, cv = 10, scoring = 'f1', refit = True, n_jobs = 4, return_train_score = True)
+    # fit gridsearch to training data
+    grid_search.fit(X_train, y_train)
+    # create key, value pair for best regressor
+    GridSearchCV_model_output['best_classifier_grid_object'] = grid_search.best_estimator_
+    # get best params
+    grid_best_params = grid_search.best_params_
+    print("Best parameters after GridSearchCV:\n {}".format(grid_best_params))
+    GridSearchCV_model_output['best_params'] = grid_best_params
+    # best score
+    grid_best_score = grid_search.best_score_
+    print("Best score after GridSearchCV:\n {:.2f}".format(grid_best_score))
+    # get feature names
+    cat_feature_names = grid_search.best_estimator_.named_steps['columntransformer'].named_transformers_['pipeline-1'].\
+        named_steps['onehotencoder'].get_feature_names(input_features = cat_feats)
+    all_feature_names = np.r_[cat_feature_names, num_feats]
+    # list to hold coefs or feature imporatnces in the case of decision trees and random forest
+    coefs_or_feats_imp = []
+    if not 'RandomForestClassifier' or not 'DecisionTreeClassifier':
+        # grab the coefficients
+        best_classifier_coef = list(grid_search.best_estimator_.named_steps[best_classifier.lower()].coef_)
+        best_classifier_coef_x = [x for x in best_classifier_coef]
+        coefs_or_feats_imp.append(best_classifier_coef_x)
+        # grab the intercept
+        grid_search_intercept = grid_search.best_estimator_.named_steps[best_classifier.lower()].intercept_
+        GridSearchCV_model_output['best_classifier_intercept'] = grid_search_intercept
+    else:
+        # grab the coefficients
+        best_classifier_coef = list(grid_search.best_estimator_.named_steps[best_classifier.lower()].feature_importances_)
+        best_classifier_coef_x = [x for x in best_classifier_coef]
+        coefs_or_feats_imp.append(best_classifier_coef_x)
+
+    # create a dataframe of feature names and coeeficients
+    coef_dict = dict(zip(all_feature_names, coefs_or_feats_imp[0]))
+    df_coef = pd.DataFrame(coef_dict.items(), columns = ['Feature', 'Coefficient'])
+    df_coef = df_coef.sort_values(by = ['Coefficient'], ascending = False)
+    df_coef = df_coef.reset_index(drop = True)
+    GridSearchCV_model_output['best_classifier_feature_importances'] = df_coef
+    # grab names of predictors
+    GridSearchCV_model_output['final_predictors'] = X_train.columns.tolist()
+
+
+    return GridSearchCV_model_output, eda_plots.bar_plot(df_coef, 'Feature', 'Coefficient')
+
+def dump_estimator(GridSearchCV_model_output):
+    # convert tuple to list
+    grid_list = list(GridSearchCV_model_output)
+    # extract best estimator
+    best_estimator = grid_list[0]['best_classifierr_grid_object']
+    # save as pickle
+    joblib.dump(best_estimator, 'models/best_classifier_dump.pkl')
+    return None
+
+def make_predictios(df_to_predict_path, submission_format_path,  model_path, GridSearchCV_model_output):
+    # load model
+    predictors = GridSearchCV_model_output['final_predictors']
+    if os.path.exists(model_path):
+        best_model = joblib.load(model_path)
+        if os.path.exists(df_to_predict_path):
+            df_to_predict = pd.read_csv(df_to_predict_path, index_col = 'building_id')
+            df_to_predict_cols = df_to_predict.columns.tolist()
+            if os.path.exists(submission_format_path):
+                df_to_submit = pd.read_csv(submission_format_path, index_col = 'building_id')
+                membership = all(col in df_to_predict_cols for col in predictors)
+                if membership:
+                    X_predictors = df_to_predict[predictors]
+                    y_predicted = best_model.predict(X_predictors)
+                    submission = pd.DataFrame(data = y_predicted, columns = df_to_submit.columns, index = df_to_submit.index)
+                    submission.to_csv('data/my_submission.csv')
+                else:
+                    not_cols = []
+                    for col in predictors:
+                        if col not in df_to_predict_cols:
+                            not_cols.append(col)
+                    raise utils.InvalidColumn(not_cols)
+            else:
+                raise utils.InvalidFilePath(submission_format_path)
+        else:
+            raise utils.InvalidFilePath(df_to_predict_path)
+    else:
+        raise utils.InvalidFilePath(model_path)
+    return submission
+    
+        
 
 
 

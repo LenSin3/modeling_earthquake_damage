@@ -39,21 +39,78 @@ def classifiers_ensemble(type):
     if type == 'binary':
         # create tuple of classifier name and classifier
         classifiers = [
-            ('Linear SVC', lin_svc),
-            ('Logistic Regression', lr),
-            ('K Nearest Neighbors', knn),
-            ('Classification Tree', dt),
-            ('Forest Tree', rf)
+            ('LinearSVC', lin_svc),
+            ('LogisticRegression', lr),
+            ('KNearestNeighbors', knn),
+            ('DecisionTreeClassifier', dt),
+            ('RandomForestClassifier', rf)
         ]
     elif type == 'multi_class':
         # create tuple of classifier name and classifier
         classifiers = [
-            ('K Nearest Neighbors', knn),
-            ('Classification Tree', dt),
-            ('Forest Tree', rf),
-            ('LogReg OVR', ovr)
+            ('KNearestNeighbors', knn),
+            ('DecisionTreeClassifier', dt),
+            ('RandomForestClassifier', rf)
+            # ('OneVsRestLogisticRegression', ovr)
             # ('LinSVC OVO', ovo)
         ]
     else:
         raise utils.ClassifierType(type)
     return classifiers
+
+def classifier_ensemble_hyperparameters(best_classifier):
+    # list of classifier names
+    classfiers_list = ['LinearSVC', 'LogisticRegression', 'KNearestNeighbors', 'DecisionTreeClassifier', 'RandomForestClassifier']
+    # parameter dictionary
+    params_dict = {
+        'LinearSVC': [
+            {'model': lin_svc},
+            {'grid': {
+                'linearsvc__C': [0.5, 1.0, 5.0, 10.0],
+            }
+            }
+        ],
+        'LogisticRegression': [
+            {'model': lr},
+            {'grid': {
+                'logisticregression__penalty': ['l2'],
+                'logisticregression__solver': ['newton-cg', 'sag', 'lbfgs', 'liblinear'],
+                'logisticregression__C': [0.001, 0.01, 0.1, 0.5, 1, 5, 10, 100, 1000]
+            }
+            }            
+        ],
+        'KNearestNeighbors': [
+            {'model': knn},
+            {'grid': {
+                'knearestneighbors__n_neighbors': [3, 5, 8, 10],
+                'knearestneighbors__radius': [0.5, 1.0, 5.0, 10.0],
+                'knearestneighbors__algorithm': ['auto', 'ball_tree', 'kd_tree'],
+                'knearestneighbors__leaf_size': [20, 30, 40, 60]
+            }
+            }
+        ],
+        'DecisionTreeClassifier': [
+            {'model': dt},
+            {'grid': {
+                'decisiontreeclassifier__max_depth': [2, 4, 8, 10, 12, 16, 20],
+                'decisiontreeclassifier__min_samples_leaf': [2, 4, 8, 10, 12, 16, 20]
+            }
+            }
+        ],
+        'RandomForestClassifier': [
+            {'model': rf},
+            {'grid' : {'randomforestclassifier__max_depth': [2, 15, 22],
+            'randomforestclassifier__min_samples_leaf': [1, 2, 4],
+            'randomforestclassifier__min_samples_split': [2, 4, 6]
+            # 'randomforestregressor__min_weight_fraction_leaf': [0.1, 0.3, 0.9],
+            # 'randomforestregressor__max_features': ['auto', 'log2', 'sqrt', None]
+            # 'randomforestregressor__max_leaf_nodes': [None, 10, 40, 90]
+        }}]
+    }
+    if best_classifier in classfiers_list:
+        grid_params = params_dict[best_classifier][1]['grid']
+        grid_model = params_dict[best_classifier][0]['model']
+    else:
+        print("{} is not among list of classifiers.".format(best_classifier))
+    
+    return grid_params, grid_model
