@@ -324,7 +324,7 @@ def multi_models_classifiers(df, target_var, stratify = True, test_size = 0.25, 
     df_f1_scores = pd.DataFrame(f1_scores.items(), columns=['Classifier', 'F1Score'])
     max_f1_score =  df_f1_scores.loc[df_f1_scores['F1Score'] == df_f1_scores['F1Score'].max()]
     # best classifier
-    best_classifier_f1_score = max_f1_score['Classifier'].values.toist()[0]
+    best_classifier_f1_score = max_f1_score['Classifier'].values.tolist()[0]
 
     
     print("####################################################################################")
@@ -352,7 +352,7 @@ def best_classifier_hyperparameter(df, best_classifier, target_var, stratify = T
     # dictionary to hold gridsearch model output
     GridSearchCV_model_output = {}
     # create gridsearch object
-    grid_search = GridSearchCV(pipe, param_grid=grid_params, cv = 10, scoring = 'f1', refit = True, n_jobs = 4, return_train_score = True)
+    grid_search = GridSearchCV(pipe, param_grid=grid_params, cv = 10, scoring = 'f1_micro', refit = True, n_jobs = 4, return_train_score = True)
     # fit gridsearch to training data
     grid_search.fit(X_train, y_train)
     # create key, value pair for best regressor
@@ -400,14 +400,14 @@ def dump_estimator(GridSearchCV_model_output):
     # convert tuple to list
     grid_list = list(GridSearchCV_model_output)
     # extract best estimator
-    best_estimator = grid_list[0]['best_classifierr_grid_object']
+    best_estimator = grid_list[0]['best_classifier_grid_object']
     # save as pickle
     joblib.dump(best_estimator, 'models/best_classifier_dump.pkl')
     return None
 
 def make_predictios(df_to_predict_path, submission_format_path,  model_path, GridSearchCV_model_output):
     # load model
-    predictors = GridSearchCV_model_output['final_predictors']
+    predictors = list(GridSearchCV_model_output)[0]['final_predictors']
     if os.path.exists(model_path):
         best_model = joblib.load(model_path)
         if os.path.exists(df_to_predict_path):
