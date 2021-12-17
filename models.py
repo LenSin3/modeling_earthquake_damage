@@ -19,7 +19,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import VotingClassifier, RandomForestClassifier
 from sklearn.multiclass import OneVsRestClassifier, OneVsOneClassifier
 from sklearn.svm import SVC
-import xgboost
+import xgboost as xgb
 import catboost
 import utils
 SEED = 42
@@ -32,6 +32,7 @@ lin_svc = SVC(kernel='linear', random_state=SEED)
 knn = KNeighborsClassifier()
 rf  = RandomForestClassifier(random_state=SEED)
 dt = DecisionTreeClassifier(random_state=SEED)
+xgb_clf = xgb.XGBClassifier(seed = SEED)
 ovr = OneVsRestClassifier(lr)
 ovo = OneVsOneClassifier(lin_svc)
 
@@ -60,7 +61,7 @@ def classifiers_ensemble(type):
 
 def classifier_ensemble_hyperparameters(best_classifier):
     # list of classifier names
-    classfiers_list = ['LinearSVC', 'LogisticRegression', 'KNearestNeighbors', 'DecisionTreeClassifier', 'RandomForestClassifier']
+    classfiers_list = ['LinearSVC', 'LogisticRegression', 'KNearestNeighbors', 'DecisionTreeClassifier', 'RandomForestClassifier', 'XGBClassifier']
     # parameter dictionary
     params_dict = {
         'LinearSVC': [
@@ -105,7 +106,17 @@ def classifier_ensemble_hyperparameters(best_classifier):
             # 'randomforestregressor__min_weight_fraction_leaf': [0.1, 0.3, 0.9],
             # 'randomforestregressor__max_features': ['auto', 'log2', 'sqrt', None]
             # 'randomforestregressor__max_leaf_nodes': [None, 10, 40, 90]
+        }}],
+        'XGBClassifier': [
+            {'model': xgb_clf},
+            {'grid' : {
+            'xgbclassifier__learning_rate': [0.1],
+            'xgbclassifier__n_estimators': [100],
+            'xgbclassifier__max_depth': [3, 10],
+            'xgbclassifier__min_child_weight': [6, 12],
+            'xgbclassifier__gamma': [0.1]
         }}]
+        
     }
     if best_classifier in classfiers_list:
         grid_params = params_dict[best_classifier][1]['grid']

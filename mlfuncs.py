@@ -396,16 +396,16 @@ def best_classifier_hyperparameter(df, best_classifier, target_var, stratify = T
 
     return GridSearchCV_model_output, eda_plots.bar_plot(df_coef, 'Feature', 'Coefficient')
 
-def dump_estimator(GridSearchCV_model_output):
+def dump_estimator(GridSearchCV_model_output, dump_path):
     # convert tuple to list
     grid_list = list(GridSearchCV_model_output)
     # extract best estimator
     best_estimator = grid_list[0]['best_classifier_grid_object']
     # save as pickle
-    joblib.dump(best_estimator, 'models/best_classifier_dump.pkl')
+    joblib.dump(best_estimator, dump_path)
     return None
 
-def make_predictios(df_to_predict_path, submission_format_path,  model_path, GridSearchCV_model_output):
+def make_predictios(df_to_predict_path, submission_format_path,  my_submission_path, model_path, GridSearchCV_model_output):
     # load model
     predictors = list(GridSearchCV_model_output)[0]['final_predictors']
     if os.path.exists(model_path):
@@ -420,7 +420,7 @@ def make_predictios(df_to_predict_path, submission_format_path,  model_path, Gri
                     X_predictors = df_to_predict[predictors]
                     y_predicted = best_model.predict(X_predictors)
                     submission = pd.DataFrame(data = y_predicted, columns = df_to_submit.columns, index = df_to_submit.index)
-                    submission.to_csv('data/my_submission.csv')
+                    submission.to_csv(my_submission_path)
                 else:
                     not_cols = []
                     for col in predictors:
