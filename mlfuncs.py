@@ -30,7 +30,7 @@ from sklearn import svm
 import xgboost
 import catboost
 
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 import sklearn.externals
 import joblib
 
@@ -139,6 +139,18 @@ def split_data(df, target_var, stratify = True, test_size = 0.25):
         raise utils.InvalidDataFrame(df)
 
     return X_train, X_test, y_train, y_test
+
+
+
+
+
+
+
+
+
+
+
+
 
 def extract_cat_num_text_feats(X_train, text_feats = None):
     """Extract categorical and numerical features.
@@ -352,7 +364,8 @@ def best_classifier_hyperparameter(df, best_classifier, target_var, stratify = T
     # dictionary to hold gridsearch model output
     GridSearchCV_model_output = {}
     # create gridsearch object
-    grid_search = GridSearchCV(pipe, param_grid=grid_params, cv = 10, scoring = 'f1_micro', refit = True, n_jobs = 4, return_train_score = True)
+    # grid_search = GridSearchCV(pipe, param_grid=grid_params, cv = 10, scoring = 'f1_micro', refit = True, n_jobs = 4, return_train_score = True)
+    grid_search = RandomizedSearchCV(pipe, param_distributions=grid_params, cv = 10, scoring = 'f1_micro', random_state=SEED, refit = True, n_jobs = 4, return_train_score = True)
     # fit gridsearch to training data
     grid_search.fit(X_train, y_train)
     # create key, value pair for best regressor

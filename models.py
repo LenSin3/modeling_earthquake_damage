@@ -110,11 +110,11 @@ def classifier_ensemble_hyperparameters(best_classifier):
         'XGBClassifier': [
             {'model': xgb_clf},
             {'grid' : {
-            'xgbclassifier__learning_rate': [0.1],
-            'xgbclassifier__n_estimators': [100],
-            'xgbclassifier__max_depth': [3, 10],
+            'xgbclassifier__learning_rate': [0.01, 0.1, 0.2, 0.3],
+            'xgbclassifier__n_estimators': [50, 100, 150, 200],
+            'xgbclassifier__max_depth': range(3, 10),
             'xgbclassifier__min_child_weight': [6, 12],
-            'xgbclassifier__gamma': [0.1]
+            'xgbclassifier__gamma': [i/10.0 for i in range(3)]
         }}]
         
     }
