@@ -202,7 +202,7 @@ def transform_to_cat(df, cols_to_cat):
 def save_transformed_data(df, filepath):
     """Save DataFrame to csv.
 
-    Save DataFrame to csf file format.
+    Save DataFrame to csv file format.
 
     Parameters
     ----------
@@ -332,3 +332,18 @@ def drop_low_var_cols(df, target_var = None, unique_val_threshold = 0.9):
     return df
     
 
+def missing_val_selector(df, missing_val_threshold = 0):
+    threshold = missing_val_threshold/100
+    high_null_mask = df.isna().sum()/len(df) > threshold
+    if high_null_mask.any():
+        high_null_df = df.loc[:, high_null_mask]
+        high_null_df_cols = high_null_df.columns.tolist()
+        for cols in high_null_df_cols:
+            print("Dropping {} due to missing values count above threshold: {}".format(cols, threshold))
+    else:
+        print("There are no columns below the threshold: {}".format(threshold))
+
+    # create a mask with fewer than threshold for missing values
+    mask = df.isna().sum()/len(df) < threshold
+    red_df = df.loc[:, mask]
+    return red_df

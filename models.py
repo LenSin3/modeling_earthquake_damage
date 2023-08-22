@@ -30,9 +30,9 @@ lin_svc = SVC(kernel='linear', random_state=SEED)
 
 # instantiate multiclass classifiers
 knn = KNeighborsClassifier()
-rf  = RandomForestClassifier(random_state=SEED)
+rf  = RandomForestClassifier(n_estimators=1000, n_jobs = 4, random_state=SEED)
 dt = DecisionTreeClassifier(random_state=SEED)
-xgb_clf = xgb.XGBClassifier(seed = SEED)
+xgb_clf = xgb.XGBClassifier(objective='multi:softmax', n_estimators=1500, tree_method='gpu_hist', gpu_id=0, random_state = SEED)
 ovr = OneVsRestClassifier(lr)
 ovo = OneVsOneClassifier(lin_svc)
 
@@ -49,8 +49,8 @@ def classifiers_ensemble(type):
     elif type == 'multi_class':
         # create tuple of classifier name and classifier
         classifiers = [
-            ('KNearestNeighbors', knn),
-            ('DecisionTreeClassifier', dt),
+            # ('KNearestNeighbors', knn),
+            # ('DecisionTreeClassifier', dt),
             ('RandomForestClassifier', rf)
             # ('OneVsRestLogisticRegression', ovr)
             # ('LinSVC OVO', ovo)
@@ -100,9 +100,9 @@ def classifier_ensemble_hyperparameters(best_classifier):
         ],
         'RandomForestClassifier': [
             {'model': rf},
-            {'grid' : {'randomforestclassifier__max_depth': [2, 15, 22],
-            'randomforestclassifier__min_samples_leaf': [1, 2, 4],
-            'randomforestclassifier__min_samples_split': [2, 4, 6]
+            {'grid' : {'randomforestclassifier__max_depth': [2, 15],
+            'randomforestclassifier__min_samples_leaf': [1, 4],
+            'randomforestclassifier__min_samples_split': [2, 6]
             # 'randomforestregressor__min_weight_fraction_leaf': [0.1, 0.3, 0.9],
             # 'randomforestregressor__max_features': ['auto', 'log2', 'sqrt', None]
             # 'randomforestregressor__max_leaf_nodes': [None, 10, 40, 90]
@@ -110,9 +110,9 @@ def classifier_ensemble_hyperparameters(best_classifier):
         'XGBClassifier': [
             {'model': xgb_clf},
             {'grid' : {
-            'xgbclassifier__learning_rate': [0.01, 0.1, 0.2, 0.3],
-            'xgbclassifier__n_estimators': [50, 100, 150, 200],
-            'xgbclassifier__max_depth': range(3, 10),
+            'xgbclassifier__learning_rate': [0.1, 0.01],
+            'xgbclassifier__n_estimators': [2000, 3000, 5000],
+            'xgbclassifier__max_depth': [3, 6],
             'xgbclassifier__min_child_weight': [6, 12],
             'xgbclassifier__gamma': [i/10.0 for i in range(3)]
         }}]

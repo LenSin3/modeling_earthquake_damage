@@ -22,7 +22,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 from tensorflow.keras import callbacks, layers
-from keras.layers import Dense, BatchNormalization
+from keras.layers import Dense, BatchNormalization, Dropout
 from keras.models import Sequential, load_model
 from keras.utils.np_utils import to_categorical
 from sklearn.model_selection import train_test_split
@@ -118,6 +118,7 @@ def extract_cat_num_text_feats_for_keras(X_train, feats_to_exclude, text_feats =
             # loop over dataframe columns
             for col in Xtrain_cols:
                 if col in feats_to_exclude:
+                    # num_feats.append(col)
                     pass
                 else:
                     # get object data columns
@@ -301,11 +302,16 @@ def transformed_train_test(df, target_var, feats_to_exclude, stratify = True, te
 
 def classification_model(n_cols, optimizer = 'adam', activation='relu', loss = 'categorical_crossentropy', metrics = 'accuracy'):
     model = Sequential()
-    model.add(Dense(128, input_shape = (n_cols,), activation=activation))
+    model.add(Dense(200, input_shape = (n_cols,), activation=activation))
+    model.add(Dropout(0.2))
+    model.add(Dense(150, activation=activation))
+    model.add(BatchNormalization())
     model.add(Dense(100, activation=activation))
-    model.add(Dense(50, activation=activation))
-    model.add(Dense(100, activation = activation))
+    model.add(Dense(100, activation=activation))
+    model.add(Dense(10, activation = activation))
     model.add(Dense(32, activation=activation))
+    model.add(Dropout(0.25))
+    model.add(Dense(100, activation = activation))
     model.add(BatchNormalization())
     model.add(Dense(3, activation = 'softmax'))
     model.summary()
@@ -319,7 +325,7 @@ def train_model(df, optimizer, loss, target_var, feats_to_exclude, metrics, stra
     model_save = ModelCheckpoint('models/best_model.hdf5',save_best_only = True)
     n_cols = X_train.shape[1]
     model = classification_model(n_cols = n_cols, optimizer = optimizer, loss = loss, metrics = metrics)
-    history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs = 30, batch_size=128, callbacks = [early_stopping, model_save], use_multiprocessing = True)
+    history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs = 50, batch_size=32, callbacks = [early_stopping, model_save], use_multiprocessing = True)
     result = model.evaluate(X_test, y_test)
     y_preds = model.predict(X_test)
     return history, result, y_test, y_preds, model, pipe
